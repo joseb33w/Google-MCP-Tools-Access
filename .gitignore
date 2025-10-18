@@ -71,7 +71,6 @@ jspm_packages/
 .dynamodb/
 
 # OAuth credential files
-*.json
 client_secret_*.json
 
 # IDE files
