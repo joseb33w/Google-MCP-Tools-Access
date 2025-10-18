@@ -1,0 +1,37 @@
+{
+  "name": "google-drive-mcp",
+  "version": "1.0.0",
+  "description": "Comprehensive Google Drive and Docs MCP Server",
+  "type": "module",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "web": "node dist/web-server.js"
+  },
+  "keywords": [
+    "mcp",
+    "google-drive",
+    "google-docs",
+    "model-context-protocol"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "googleapis": "^164.0.0",
+    "open": "^10.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
