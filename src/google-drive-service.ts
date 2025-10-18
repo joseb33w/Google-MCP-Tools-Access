@@ -65,6 +65,19 @@ export class GoogleDriveService {
     }
   }
 
+  // Method to set user-specific tokens (for multi-user support)
+  setUserTokens(tokens: any) {
+    this.oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/oauth2callback'
+    );
+    this.oauth2Client.setCredentials(tokens);
+    this.drive = google.drive({ version: 'v3', auth: this.oauth2Client });
+    this.docs = google.docs({ version: 'v1', auth: this.oauth2Client });
+    this.initialized = true;
+  }
+
   // Google Docs API Methods
   async createDocument(title: string) {
     await this.ensureAuthenticated();

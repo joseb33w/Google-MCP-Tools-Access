@@ -28,8 +28,8 @@ const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly'
 ];
 
-const PORT = 3001;
-const REDIRECT_URI = `http://localhost:${PORT}/oauth2callback`;
+const PORT = 3002;
+const REDIRECT_URI = `http://localhost:3002/oauth2callback`;
 
 // OAuth credentials - set these as environment variables or replace with your own
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'YOUR_CLIENT_ID_HERE';

@@ -1,13 +1,31 @@
 import 'dotenv/config';
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { GoogleDriveService } from './google-drive-service.js';
+import { google } from 'googleapis';
+
+// Extend Request type to include userTokens
+interface AuthenticatedRequest extends Request {
+  userTokens?: any;
+}
 
 const app = express();
 const port = process.env.PORT || 8080;
 
-app.use(cors());
+// CORS configuration for web app
+app.use(cors({
+  origin: [
+    'https://google-mcp-tools-access-production.up.railway.app', // Railway domain
+    'http://localhost:3000', // Local development
+    'https://your-domain.com', // Your custom domain (update this later)
+    'https://www.your-domain.com' // Your custom domain with www
+  ],
+  credentials: true
+}));
 app.use(express.json());
+
+// Store user tokens (in production, use Redis or database)
+const userTokens = new Map();
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -18,8 +36,74 @@ app.get('/health', (req, res) => {
   });
 });
 
-// MCP endpoint
-app.post('/mcp', async (req, res) => {
+// OAuth endpoints for user authentication
+app.get('/auth/google', (req, res) => {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    `${req.protocol}://${req.get('host')}/auth/callback`
+  );
+
+  const scopes = [
+    'https://www.googleapis.com/auth/drive',
+    'https://www.googleapis.com/auth/docs',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
+  ];
+
+  const authUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes,
+    prompt: 'consent'
+  });
+
+  res.redirect(authUrl);
+});
+
+app.get('/auth/callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    
+    if (!code) {
+      return res.status(400).json({ error: 'No authorization code received' });
+    }
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${req.protocol}://${req.get('host')}/auth/callback`
+    );
+
+    const { tokens } = await oauth2Client.getToken(code as string);
+    
+    // Generate a session ID for the user
+    const sessionId = Math.random().toString(36).substring(2, 15);
+    userTokens.set(sessionId, tokens);
+
+    // Redirect to frontend with session ID
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    res.redirect(`${frontendUrl}?session=${sessionId}`);
+    
+  } catch (error) {
+    console.error('OAuth callback error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// Middleware to validate user tokens
+const authenticateUser = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const sessionId = req.headers['x-session-id'] as string;
+  
+  if (!sessionId || !userTokens.has(sessionId)) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  req.userTokens = userTokens.get(sessionId);
+  next();
+};
+
+// MCP endpoint with user authentication
+app.post('/mcp', authenticateUser, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { jsonrpc, id, method, params } = req.body;
 
@@ -62,7 +146,11 @@ app.post('/mcp', async (req, res) => {
       });
     } else if (method === 'tools/call') {
       const { name, arguments: args } = params;
+      
+      // Create service with user-specific tokens
       const service = new GoogleDriveService();
+      // Override the service's OAuth tokens with user's tokens
+      service.setUserTokens(req.userTokens);
 
       let result;
       switch (name) {
