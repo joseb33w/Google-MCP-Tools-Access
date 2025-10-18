@@ -17,8 +17,8 @@ app.use(cors({
   origin: [
     'https://google-mcp-tools-access-production.up.railway.app', // Railway domain
     'http://localhost:3000', // Local development
-    'https://your-domain.com', // Your custom domain (update this later)
-    'https://www.your-domain.com' // Your custom domain with www
+    'https://triamit.com', // Your custom domain
+    'https://www.triamit.com' // Your custom domain with www
   ],
   credentials: true
 }));
